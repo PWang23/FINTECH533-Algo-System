@@ -132,6 +132,13 @@ divs.rename(
 )
 divs.dropna(inplace=True)
 divs['Date'] = pd.to_datetime(divs['Date']).dt.date
+#on 16 Dec 2019, IVV issued TWO dividends: 
+#an interim and a special. This can happen sometimes.
+divs = divs.groupby(['Instrument', 'Date'], as_index = False).agg({
+    'div_amt': 'sum',
+    'div_type': lambda x: ", ".join(x),
+    'pay_type': lambda x: ", ".join(x)
+    })
 
 # At this point, I'm saving the divs df as a csv called 'dirty_divs.csv' because
 #   I want you to open it and see something.
@@ -185,6 +192,9 @@ unadjusted_price_history['split_rto'].fillna(1, inplace=True)
 # 11) We shouldn't have any missing data in our dataframe now. Verify that:
 if unadjusted_price_history.isnull().values.any():
     raise Exception('missing values detected!')
+
+#looks like sometimes Refinitiv will include a duplicate of the last (most recent) row when querying price data.
+unadjusted_price_history.drop_duplicates(inplace=True)
 
 # 12) Save raw data as csv:
 unadjusted_price_history.to_csv('unadjusted_price_history.csv', index=False)

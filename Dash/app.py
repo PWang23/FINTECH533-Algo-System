@@ -1,53 +1,38 @@
-# -*- coding: utf-8 -*-
-from dash import Dash, dcc, html, Input, Output
+from datetime import date
+from dash import Dash, dcc, html
+from dash.dependencies import Input, Output
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-
-app = Dash(__name__, external_stylesheets=external_stylesheets)
-
-all_options = {
-    'America': ['New York City', 'San Francisco', 'Cincinnati'],
-    'Canada': [u'Montréal', 'Toronto', 'Ottawa']
-}
+app = Dash(__name__)
 app.layout = html.Div([
-    dcc.RadioItems(
-        list(all_options.keys()),
-        'America',
-        id='countries-radio',
+    dcc.DatePickerRange(
+        id='my-date-picker-range',
+        min_date_allowed=date(1995, 8, 5),
+        max_date_allowed=date(2017, 9, 19),
+        initial_visible_month=date(2017, 8, 5),
+        end_date=date(2017, 8, 25)
     ),
-
-    html.Hr(),
-
-    dcc.RadioItems(id='cities-radio'),
-
-    html.Hr(),
-
-    html.Div(id='display-selected-values')
+    html.Div(id='output-container-date-picker-range')
 ])
 
 
 @app.callback(
-    Output('cities-radio', 'options'),
-    Input('countries-radio', 'value'))
-def set_cities_options(selected_country):
-    return [{'label': i, 'value': i} for i in all_options[selected_country]]
-
-
-@app.callback(
-    Output('cities-radio', 'value'),
-    Input('cities-radio', 'options'))
-def set_cities_value(available_options):
-    return available_options[0]['value']
-
-
-@app.callback(
-    Output('display-selected-values', 'children'),
-    Input('countries-radio', 'value'),
-    Input('cities-radio', 'value'))
-def set_display_children(selected_country, selected_city):
-    return u'{} is a city in {}'.format(
-        selected_city, selected_country,
-    )
+    Output('output-container-date-picker-range', 'children'),
+    Input('my-date-picker-range', 'start_date'),
+    Input('my-date-picker-range', 'end_date'))
+def update_output(start_date, end_date):
+    string_prefix = 'You have selected: '
+    if start_date is not None:
+        start_date_object = date.fromisoformat(start_date)
+        start_date_string = start_date_object.strftime('%B %d, %Y')
+        string_prefix = string_prefix + 'Start Date: ' + start_date_string + ' | '
+    if end_date is not None:
+        end_date_object = date.fromisoformat(end_date)
+        end_date_string = end_date_object.strftime('%B %d, %Y')
+        string_prefix = string_prefix + 'End Date: ' + end_date_string
+    if len(string_prefix) == len('You have selected: '):
+        return 'Select a date to see it displayed here'
+    else:
+        return string_prefix
 
 
 if __name__ == '__main__':

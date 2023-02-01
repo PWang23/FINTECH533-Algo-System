@@ -21,7 +21,7 @@ app.layout = html.Div([
     ]),
     html.Div([
         dcc.DatePickerRange(
-        id='my-date-picker-range',
+        id='raw-data-date-picker-range',
         display_format='YYYY-MM-DD',
         min_date_allowed=date(2015, 8, 5), 
         max_date_allowed=date.today(),
@@ -51,8 +51,8 @@ app.layout = html.Div([
     Input("run-query", "n_clicks"),
     [State('benchmark-id', 'value'),
     State('asset-id', 'value'),
-    State('my-date-picker-range', 'start_date'),
-    State('my-date-picker-range', 'end_date')
+    State('raw-data-date-picker-range', 'start_date'),
+    State('raw-data-date-picker-range', 'end_date')
     ],
     prevent_initial_call=True
 )
@@ -124,6 +124,11 @@ def query_refinitiv(n_clicks, benchmark_id, asset_id, start_date, end_date):
     divs.dropna(inplace=True)
     divs['Date'] = pd.to_datetime(divs['Date']).dt.date
     divs = divs[(divs.Date.notnull()) & (divs.div_amt > 0)]
+    divs = divs.groupby(['Instrument', 'Date'], as_index = False).agg({
+    'div_amt': 'sum',
+    'div_type': lambda x: ", ".join(x),
+    'pay_type': lambda x: ", ".join(x)
+    })
 
     splits.rename(
         columns={
@@ -151,6 +156,8 @@ def query_refinitiv(n_clicks, benchmark_id, asset_id, start_date, end_date):
 
     if unadjusted_price_history.isnull().values.any():
         raise Exception('missing values detected!')
+
+    unadjusted_price_history.drop_duplicates(inplace=True)
 
     return(unadjusted_price_history.to_dict('records'))
 
