@@ -224,6 +224,7 @@ def calculate_returns(history_tbl):
 
 @app.callback(
     Output("ab-plot", "figure"),
+    Output("summary-text", "children"),
     Input("returns-tbl", "data"),
     [State('benchmark-id', 'value'),
     State('asset-id', 'value'),
@@ -235,11 +236,14 @@ def calculate_returns(history_tbl):
 def render_ab_plot(returns, benchmark_id, asset_id, start_date, end_date):
     returns_df = pd.DataFrame(returns)
     returns_df['Date'] = pd.to_datetime(returns_df['Date']).dt.date
-    returns_df = returns_df[(returns_df['Date'] >= pd.to_datetime(start_date)) & (returns_df['Date'] <= pd.to_datetime(end_date))]
+    returns_df = returns_df[(returns_df['Date'] >= pd.Timestamp(start_date)) & (returns_df['Date'] <= pd.Timestamp(end_date))]
     returns = returns_df.to_dict()
-    return(
-        px.scatter(returns, x=benchmark_id, y=asset_id, trendline='ols')
-    )
+    fig = px.scatter(returns, x=benchmark_id, y=asset_id, trendline='ols')
+    model = px.get_trendline_results(fig)
+    alpha = model.iloc[0]["px_fit_results"].params[0]
+    beta = model.iloc[0]["px_fit_results"].params[1]
+    alpha_beta_string = 'alpha is ' + str(alpha) + ', beta is ' + str(beta)
+    return(fig, alpha_beta_string)
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=8888)
