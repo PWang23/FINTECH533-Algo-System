@@ -14,9 +14,9 @@ dt_prc_div_splt = pd.read_csv('unadjusted_price_history.csv')
 app = Dash(__name__)
 app.layout = html.Div([
     html.Div([
-        html.Label('benchmark'),
+        html.Label('benchmark:  '),
         dcc.Input(id = 'benchmark-id', type = 'text', value="IVV"),
-        html.Label('asset'),
+        html.Label('asset:  '),
         dcc.Input(id = 'asset-id', type = 'text', value="AAPL.O")
     ]),
     html.Div([
