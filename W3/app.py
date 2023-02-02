@@ -20,8 +20,20 @@ app.layout = html.Div([
         dcc.Input(id = 'asset-id', type = 'text', value="AAPL.O")
     ]),
     html.Div([
+        html.Label('Raw data filter'),
         dcc.DatePickerRange(
         id='raw-data-date-picker-range',
+        display_format='YYYY-MM-DD',
+        min_date_allowed=date(2015, 8, 5), 
+        max_date_allowed=date.today(),
+        initial_visible_month=date(2019, 8, 5)
+    )
+    ]),
+
+    html.Div([
+        html.Label('Plot data filter'),
+        dcc.DatePickerRange(
+        id='plot-date-picker-range',
         display_format='YYYY-MM-DD',
         min_date_allowed=date(2015, 8, 5), 
         max_date_allowed=date.today(),
@@ -42,18 +54,20 @@ app.layout = html.Div([
         style_table={'height': '300px', 'overflowY': 'auto'}
     ),
     html.H2('Alpha & Beta Scatter Plot'),
-    html.Div([
-        dcc.DatePickerRange(
-        id='return-date-picker-range',
-        display_format='YYYY-MM-DD',
-        min_date_allowed=date(2015, 8, 5), 
-        max_date_allowed=date.today(),
-        initial_visible_month=date(2017, 8, 5)
-    )
-    ]),
     dcc.Graph(id="ab-plot"),
     html.P(id='summary-text', children="")
 ])
+
+@app.callback(
+    Output('plot-date-picker-range', 'min_date_allowed'),
+    Output('plot-date-picker-range', 'max_date_allowed'),
+    [Input('raw-data-date-picker-range', 'start_date'),
+    Input('raw-data-date-picker-range', 'end_date')
+    ]
+)
+def update_plot_date_range(start_date, end_date):
+    start_day_plus1 = pd.to_datetime(start_date) + pd.Timedelta(days=1)
+    return start_day_plus1.strftime("%Y-%m-%d"), end_date
 
 @app.callback(
     Output("history-tbl", "data"),
@@ -178,7 +192,6 @@ def query_refinitiv(n_clicks, benchmark_id, asset_id, start_date, end_date):
 def calculate_returns(history_tbl):
 
     dt_prc_div_splt = pd.DataFrame(history_tbl)
-    date_column = dt_prc_div_splt
 
     # Define what columns contain the Identifier, date, price, div, & split info
     ins_col = 'Instrument'
@@ -212,11 +225,18 @@ def calculate_returns(history_tbl):
 @app.callback(
     Output("ab-plot", "figure"),
     Input("returns-tbl", "data"),
-    [State('benchmark-id', 'value'), State('asset-id', 'value')],
+    [State('benchmark-id', 'value'),
+    State('asset-id', 'value'),
+    State('plot-date-picker-range', 'start_date'),
+    State('plot-date-picker-range', 'end_date')
+    ],
     prevent_initial_call = True
 )
-def render_ab_plot(returns, benchmark_id, asset_id):
-    print(returns)
+def render_ab_plot(returns, benchmark_id, asset_id, start_date, end_date):
+    returns_df = pd.DataFrame(returns)
+    returns_df['Date'] = pd.to_datetime(returns_df['Date']).dt.date
+    returns_df = returns_df[(returns_df['Date'] >= pd.to_datetime(start_date)) & (returns_df['Date'] <= pd.to_datetime(end_date))]
+    returns = returns_df.to_dict()
     return(
         px.scatter(returns, x=benchmark_id, y=asset_id, trendline='ols')
     )
