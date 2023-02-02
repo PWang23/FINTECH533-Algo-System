@@ -6,7 +6,8 @@ from datetime import datetime, date
 import plotly.express as px
 import os
 
-ek.set_app_key('977aeb771744454e8803c10c8704c8e1ef2f4c27')
+ek.set_app_key(os.getenv('API_Key'))
+
 
 #not used yet, only small amount of data in this file
 dt_prc_div_splt = pd.read_csv('unadjusted_price_history.csv')
