@@ -25,7 +25,7 @@ app.layout = html.Div([
         display_format='YYYY-MM-DD',
         min_date_allowed=date(2015, 8, 5), 
         max_date_allowed=date.today(),
-        initial_visible_month=date(2017, 8, 5)
+        initial_visible_month=date(2019, 8, 5)
     )
     ]),
     html.Button('QUERY Refinitiv', id = 'run-query', n_clicks = 0),
@@ -42,6 +42,15 @@ app.layout = html.Div([
         style_table={'height': '300px', 'overflowY': 'auto'}
     ),
     html.H2('Alpha & Beta Scatter Plot'),
+    html.Div([
+        dcc.DatePickerRange(
+        id='return-date-picker-range',
+        display_format='YYYY-MM-DD',
+        min_date_allowed=date(2015, 8, 5), 
+        max_date_allowed=date.today(),
+        initial_visible_month=date(2017, 8, 5)
+    )
+    ]),
     dcc.Graph(id="ab-plot"),
     html.P(id='summary-text', children="")
 ])
@@ -169,6 +178,7 @@ def query_refinitiv(n_clicks, benchmark_id, asset_id, start_date, end_date):
 def calculate_returns(history_tbl):
 
     dt_prc_div_splt = pd.DataFrame(history_tbl)
+    date_column = dt_prc_div_splt
 
     # Define what columns contain the Identifier, date, price, div, & split info
     ins_col = 'Instrument'
@@ -182,19 +192,21 @@ def calculate_returns(history_tbl):
         [ins_col, dte_col, prc_col, div_col, spt_col]].groupby(ins_col)
     numerator = dt_prc_div_splt[[dte_col, ins_col, prc_col, div_col]].tail(-1)
     denominator = dt_prc_div_splt[[prc_col, spt_col]].head(-1)
-
-    return(
-        pd.DataFrame({
+    res = pd.DataFrame({
         'Date': numerator[dte_col].reset_index(drop=True),
         'Instrument': numerator[ins_col].reset_index(drop=True),
         'rtn': np.log(
             (numerator[prc_col] + numerator[div_col]).reset_index(drop=True) / (
                     denominator[prc_col] * denominator[spt_col]
             ).reset_index(drop=True)
-        )
-    }).pivot_table(
+        )}).pivot_table(
             values='rtn', index='Date', columns='Instrument'
-        ).to_dict('records')
+        ).reset_index()
+    res['Date'] = pd.to_datetime(res['Date']).dt.date
+    print(res)
+
+    return(
+        res.to_dict('records')
     )
 
 @app.callback(
@@ -204,6 +216,7 @@ def calculate_returns(history_tbl):
     prevent_initial_call = True
 )
 def render_ab_plot(returns, benchmark_id, asset_id):
+    print(returns)
     return(
         px.scatter(returns, x=benchmark_id, y=asset_id, trendline='ols')
     )
