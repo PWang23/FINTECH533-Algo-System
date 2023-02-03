@@ -6,8 +6,9 @@ from datetime import datetime, date
 import plotly.express as px
 import os
 
-ek.set_app_key(os.getenv('API_Key'))
+ek.set_app_key(os.getenv('AppKey'))
 
+#ek.set_app_key('977aeb771744454e8803c10c8704c8e1ef2f4c27')
 
 #not used yet, only small amount of data in this file
 dt_prc_div_splt = pd.read_csv('unadjusted_price_history.csv')
@@ -30,17 +31,6 @@ app.layout = html.Div([
         initial_visible_month=date(2019, 8, 5)
     )
     ]),
-
-    html.Div([
-        html.Label('Plot data filter'),
-        dcc.DatePickerRange(
-        id='plot-date-picker-range',
-        display_format='YYYY-MM-DD',
-        min_date_allowed=date(2015, 8, 5), 
-        max_date_allowed=date.today(),
-        initial_visible_month=date(2019, 8, 5)
-    )
-    ]),
     html.Button('QUERY Refinitiv', id = 'run-query', n_clicks = 0),
     html.H2('Raw Data from Refinitiv'),
     dash_table.DataTable(
@@ -55,6 +45,17 @@ app.layout = html.Div([
         style_table={'height': '300px', 'overflowY': 'auto'}
     ),
     html.H2('Alpha & Beta Scatter Plot'),
+    html.Div([
+        html.Label('Plot data filter'),
+        dcc.DatePickerRange(
+        id='plot-date-picker-range',
+        display_format='YYYY-MM-DD',
+        min_date_allowed=date(2015, 8, 5), 
+        max_date_allowed=date.today(),
+        initial_visible_month=date(2019, 8, 5)
+    )
+    ]),
+    html.Button('Plot', id = 'abPlot', n_clicks = 0),
     dcc.Graph(id="ab-plot"),
     html.P(id='summary-text', children="")
 ])
@@ -62,13 +63,15 @@ app.layout = html.Div([
 @app.callback(
     Output('plot-date-picker-range', 'min_date_allowed'),
     Output('plot-date-picker-range', 'max_date_allowed'),
+    Output('plot-date-picker-range', 'initial_visible_month'),
     [Input('raw-data-date-picker-range', 'start_date'),
     Input('raw-data-date-picker-range', 'end_date')
-    ]
+    ],
+    prevent_initial_call=True
 )
 def update_plot_date_range(start_date, end_date):
     start_day_plus1 = pd.to_datetime(start_date) + pd.Timedelta(days=1)
-    return start_day_plus1.strftime("%Y-%m-%d"), end_date
+    return start_day_plus1.strftime("%Y-%m-%d"), end_date, start_day_plus1.strftime("%Y-%m-%d")
 
 @app.callback(
     Output("history-tbl", "data"),
@@ -217,7 +220,6 @@ def calculate_returns(history_tbl):
             values='rtn', index='Date', columns='Instrument'
         ).reset_index()
     res['Date'] = pd.to_datetime(res['Date']).dt.date
-    print(res)
 
     return(
         res.to_dict('records')
@@ -226,18 +228,22 @@ def calculate_returns(history_tbl):
 @app.callback(
     Output("ab-plot", "figure"),
     Output("summary-text", "children"),
-    Input("returns-tbl", "data"),
-    [State('benchmark-id', 'value'),
+    Input("abPlot", "n_clicks"),
+    [State("returns-tbl", "data"),
+    State('benchmark-id', 'value'),
     State('asset-id', 'value'),
     State('plot-date-picker-range', 'start_date'),
     State('plot-date-picker-range', 'end_date')
     ],
     prevent_initial_call = True
 )
-def render_ab_plot(returns, benchmark_id, asset_id, start_date, end_date):
+def render_ab_plot(n_clicks,returns, benchmark_id, asset_id, start_date, end_date):
     returns_df = pd.DataFrame(returns)
     returns_df['Date'] = pd.to_datetime(returns_df['Date']).dt.date
-    returns_df = returns_df[(returns_df['Date'] >= pd.Timestamp(start_date)) & (returns_df['Date'] <= pd.Timestamp(end_date))]
+    date_format = "%Y-%m-%d"
+    start_date = datetime.strptime(start_date, date_format).date()
+    end_date = datetime.strptime(end_date, date_format).date()
+    returns_df = returns_df[(returns_df['Date'] >= start_date) & (returns_df['Date'] <= end_date)]
     returns = returns_df.to_dict()
     fig = px.scatter(returns, x=benchmark_id, y=asset_id, trendline='ols')
     model = px.get_trendline_results(fig)
