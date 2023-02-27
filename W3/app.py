@@ -8,8 +8,6 @@ import os
 
 ek.set_app_key(os.getenv('AppKey'))
 
-#ek.set_app_key('977aeb771744454e8803c10c8704c8e1ef2f4c27')
-
 #not used yet, only small amount of data in this file
 dt_prc_div_splt = pd.read_csv('unadjusted_price_history.csv')
 
@@ -253,4 +251,4 @@ def render_ab_plot(n_clicks,returns, benchmark_id, asset_id, start_date, end_dat
     return(fig, alpha_beta_string)
 
 if __name__ == '__main__':
-    app.run_server(debug=True, port=8888)
+    app.run_server(debug=True)
