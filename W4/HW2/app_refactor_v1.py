@@ -411,7 +411,7 @@ def get_exit_tbl(n_clicks, entry_tbl, history_tbl, n2, alpha2, asset):
     
     live_exit_orders = filled_exit_orders[
         filled_exit_orders['status'] == 'LIVE'
-        ]
+        ].copy()
     
     #for i in range(0, len(live_exit_orders)):
     #    print(pd.to_datetime(next_business_day).date())
